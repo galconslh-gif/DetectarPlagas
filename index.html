@@ -5,40 +5,41 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
     <style>
-        body { margin: 0; background-color: black; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; }
+        body { margin: 0; background-color: black; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; overflow: hidden; }
         canvas { width: 100% !important; height: auto !important; }
-        #status { position: absolute; top: 10px; background: rgba(0,0,0,0.5); padding: 5px; }
+        #setup-layer { position:fixed; top:0; left:0; width:100%; height:100%; background:black; display:flex; justify-content:center; align-items:center; z-index:10; }
+        button { padding:20px 40px; font-size:20px; cursor:pointer; background:#28a745; color:white; border:none; border-radius:10px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="status">Cargando Cámara e IA...</div>
+    <div id="setup-layer">
+        <button onclick="startApp()">ACTIVAR CÁMARA</button>
+    </div>
     <div id="webcam-container"></div>
-    <script type="text/javascript">
-        // RUTA DIRECTA A LA NUBE DE GOOGLE (YA COMPROBADA)
-        const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
 
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
         let model, webcam, maxPredictions;
+
+        async function startApp() {
+            document.getElementById('setup-layer').style.display = 'none';
+            await init(); 
+        }
 
         async function init() {
             try {
-                // Se cargan los archivos desde la nube de Google
                 const modelURL = URL + "model.json";
                 const metadataURL = URL + "metadata.json";
-                
                 model = await tmImage.load(modelURL, metadataURL);
                 maxPredictions = model.getTotalClasses();
 
-                // Configuración de cámara trasera (environment)
                 webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, false);
                 await webcam.setup({ facingMode: "environment" }); 
                 await webcam.play();
-                
-                document.getElementById("status").style.display = "none";
                 window.requestAnimationFrame(loop);
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
             } catch (e) {
-                document.getElementById("status").innerHTML = "Error: " + e;
-                console.error(e);
+                alert("Error al iniciar cámara: " + e);
             }
         }
 
@@ -51,7 +52,7 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
-                // Probabilidad de 0.40 para que detecte tus pulgones (53%)
+                // Probabilidad de 0.40 para detectar tus Pulgones (53%)
                 if (prediction[i].probability > 0.40) {
                     if (typeof ThunkableWebviewerActivity !== "undefined") {
                         ThunkableWebviewerActivity.postMessage(prediction[i].className);
@@ -59,7 +60,6 @@
                 }
             }
         }
-        init();
     </script>
 </body>
 </html>
