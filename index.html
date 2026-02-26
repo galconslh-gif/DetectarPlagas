@@ -18,7 +18,8 @@
     <div id="webcam-container"></div>
 
     <script>
-        const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
+        // Si cambias de modelo, solo cambia este link
+        const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/"; 
         let model, webcam;
         let escanearActivo = false;
 
@@ -27,10 +28,8 @@
             document.getElementById('status-bar').style.display = 'block';
             
             try {
-                // 1. Cargar el modelo
                 model = await tmImage.load(URL + "model.json", URL + "metadata.json");
                 
-                // 2. Iniciar cámara (Modo ambiente/trasera)
                 webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, false);
                 await webcam.setup({ facingMode: "environment" }); 
                 await webcam.play();
@@ -38,7 +37,7 @@
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
                 escanearActivo = true;
                 
-                // 3. Temporizador de 6 segundos para "congelar"
+                // Temporizador de 6 segundos
                 setTimeout(() => {
                     escanearActivo = false;
                     document.getElementById('status-bar').innerHTML = "ESCANEO FINALIZADO";
@@ -64,13 +63,19 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < model.getTotalClasses(); i++) {
-                // Probabilidad de 0.40 para detectar tus clases
                 if (prediction[i].probability > 0.40) { 
-                    const mensaje = prediction[i].className;
+                    const nombreClase = prediction[i].className;
                     
-                    // ENVÍO DE MENSAJE A THUNKABLE
-                    if (typeof ThunkableWebviewerActivity !== "undefined") {
-                        ThunkableWebviewerActivity.postMessage(mensaje);
+                    // Doble método de envío para iPhone/iOS
+                    try {
+                        // Intento 1: Estándar de Thunkable
+                        if (typeof ThunkableWebviewerActivity !== "undefined") {
+                            ThunkableWebviewerActivity.postMessage(nombreClase);
+                        } 
+                        // Intento 2: Método universal para navegadores embebidos
+                        window.postMessage(nombreClase, "*");
+                    } catch (err) {
+                        // Silenciar errores de envío
                     }
                 }
             }
