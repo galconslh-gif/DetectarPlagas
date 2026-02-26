@@ -8,17 +8,16 @@
         body { margin: 0; background: #000; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
         #webcam-container { width: 100%; display: flex; justify-content: center; position: absolute; top: 0; }
         canvas { width: 100% !important; height: auto !important; }
-        .boton-ios { padding: 25px 50px; font-size: 22px; background: #28a745; color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; z-index: 10; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        #status-bar { position: absolute; bottom: 20px; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 10px; font-size: 18px; color: #ffc107; z-index: 10; display: none; }
+        .boton-ios { padding: 25px 50px; font-size: 22px; background: #28a745; color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; z-index: 100; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        #status-bar { position: absolute; bottom: 20px; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 10px; font-size: 18px; color: #ffc107; z-index: 100; display: none; }
     </style>
 </head>
 <body>
-    <button id="iniciar" class="boton-ios" onclick="activar()">TOCA AQUÍ PARA ESCANEAR</button>
+    <button id="iniciar" class="boton-ios" onclick="activar()">TOCA PARA ANALIZAR</button>
     <div id="status-bar">Analizando...</div>
     <div id="webcam-container"></div>
 
     <script>
-        // Si cambias de modelo, solo cambia este link
         const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/"; 
         let model, webcam;
         let escanearActivo = false;
@@ -29,15 +28,14 @@
             
             try {
                 model = await tmImage.load(URL + "model.json", URL + "metadata.json");
-                
                 webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, false);
                 await webcam.setup({ facingMode: "environment" }); 
                 await webcam.play();
-                
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
-                escanearActivo = true;
                 
-                // Temporizador de 6 segundos
+                escanearActivo = true;
+
+                // Temporizador de 6 segundos para congelar el análisis
                 setTimeout(() => {
                     escanearActivo = false;
                     document.getElementById('status-bar').innerHTML = "ESCANEO FINALIZADO";
@@ -46,7 +44,7 @@
 
                 window.requestAnimationFrame(loop);
             } catch (e) {
-                alert("Error crítico: " + e);
+                alert("Error: " + e);
             }
         }
 
@@ -66,16 +64,11 @@
                 if (prediction[i].probability > 0.40) { 
                     const nombreClase = prediction[i].className;
                     
-                    // Doble método de envío para iPhone/iOS
-                    try {
-                        // Intento 1: Estándar de Thunkable
-                        if (typeof ThunkableWebviewerActivity !== "undefined") {
-                            ThunkableWebviewerActivity.postMessage(nombreClase);
-                        } 
-                        // Intento 2: Método universal para navegadores embebidos
-                        window.postMessage(nombreClase, "*");
-                    } catch (err) {
-                        // Silenciar errores de envío
+                    // MÉTODO MAESTRO PARA THUNKABLE (iOS compatible)
+                    if (window.ReactNativeWebView) {
+                        window.ReactNativeWebView.postMessage(nombreClase);
+                    } else if (typeof ThunkableWebviewerActivity !== "undefined") {
+                        ThunkableWebviewerActivity.postMessage(nombreClase);
                     }
                 }
             }
