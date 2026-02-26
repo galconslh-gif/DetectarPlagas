@@ -7,24 +7,23 @@
     <style>
         body { margin: 0; background-color: black; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: white; font-family: -apple-system, sans-serif; }
         #webcam-container { width: 100%; display: flex; justify-content: center; }
-        canvas { width: 100% !important; height: auto !important; }
-        #btn-iniciar { padding: 20px 40px; font-size: 18px; background-color: #28a745; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        #status { margin-top: 10px; font-size: 14px; color: #888; text-align: center; }
+        canvas { width: 100% !important; height: auto !important; border-radius: 10px; }
+        #btn-iniciar { padding: 20px 40px; font-size: 20px; background-color: #28a745; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        #status { margin-top: 15px; font-size: 14px; color: #888; text-align: center; }
     </style>
 </head>
 <body>
-    <button id="btn-iniciar" onclick="comenzar()">ACTIVAR ESCÁNER</button>
-    <div id="status">Toca el botón para permitir el acceso</div>
+    <button id="btn-iniciar" onclick="iniciarEscaner()">ACTIVAR CÁMARA</button>
+    <div id="status">Toca el botón para permitir el acceso en iOS</div>
     <div id="webcam-container"></div>
 
     <script type="text/javascript">
-        // Usamos tu link de Teachable Machine
         const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
         let model, webcam, maxPredictions;
 
-        async function comenzar() {
+        async function iniciarEscaner() {
             document.getElementById("btn-iniciar").style.display = "none";
-            document.getElementById("status").innerHTML = "Iniciando cámara...";
+            document.getElementById("status").innerHTML = "Iniciando IA y Cámara...";
             await init();
         }
 
@@ -35,10 +34,11 @@
                 model = await tmImage.load(modelURL, metadataURL);
                 maxPredictions = model.getTotalClasses();
 
-                const flip = false;
+                // Configuración vital para la cámara del iPhone
+                const flip = false; 
                 webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, flip);
                 
-                // Configuración para cámara trasera en iPhone
+                // Forzamos la cámara trasera (environment)
                 await webcam.setup({ facingMode: "environment" }); 
                 
                 await webcam.play();
@@ -47,7 +47,7 @@
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
             } catch (e) {
                 document.getElementById("status").innerHTML = "Error: " + e;
-                console.error(e);
+                alert("Asegúrate de dar permiso a la cámara en el aviso que aparecerá.");
             }
         }
 
@@ -60,7 +60,6 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
-                // Probabilidad de 0.35 para detectar tus pulgones
                 if (prediction[i].probability > 0.35) {
                     if (typeof ThunkableWebviewerActivity !== "undefined") {
                         ThunkableWebviewerActivity.postMessage(prediction[i].className);
