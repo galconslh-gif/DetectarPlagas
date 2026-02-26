@@ -5,51 +5,75 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
     <style>
-        body { margin: 0; background: #000; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: -apple-system, sans-serif; }
-        #webcam-container { width: 100%; display: flex; justify-content: center; }
+        body { margin: 0; background: #000; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
+        #webcam-container { width: 100%; display: flex; justify-content: center; position: absolute; top: 0; }
         canvas { width: 100% !important; height: auto !important; }
-        .boton-ios { padding: 25px 50px; font-size: 22px; background: #28a745; color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .boton-ios { padding: 25px 50px; font-size: 22px; background: #28a745; color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; z-index: 10; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        #status-bar { position: absolute; bottom: 20px; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 10px; font-size: 18px; color: #ffc107; z-index: 10; display: none; }
     </style>
 </head>
 <body>
     <button id="iniciar" class="boton-ios" onclick="activar()">TOCA AQUÍ PARA ESCANEAR</button>
+    <div id="status-bar">Analizando...</div>
     <div id="webcam-container"></div>
 
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
         let model, webcam;
+        let escanearActivo = false;
 
         async function activar() {
-            // 1. Ocultamos el botón para que no estorbe
             document.getElementById('iniciar').style.display = 'none';
+            document.getElementById('status-bar').style.display = 'block';
             
             try {
-                // 2. Cargamos el modelo
+                // 1. Cargar el modelo
                 model = await tmImage.load(URL + "model.json", URL + "metadata.json");
                 
-                // 3. Iniciamos la cámara (iOS requiere que esto pase justo después de un clic)
+                // 2. Iniciar cámara (Modo ambiente/trasera)
                 webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, false);
                 await webcam.setup({ facingMode: "environment" }); 
                 await webcam.play();
                 
-                window.requestAnimationFrame(loop);
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
+                escanearActivo = true;
+                
+                // 3. Temporizador de 6 segundos para "congelar"
+                setTimeout(() => {
+                    escanearActivo = false;
+                    document.getElementById('status-bar').innerHTML = "ESCANEO FINALIZADO";
+                    document.getElementById('status-bar').style.color = "#28a745";
+                }, 6000);
+
+                window.requestAnimationFrame(loop);
             } catch (e) {
                 alert("Error crítico: " + e);
             }
         }
 
         async function loop() {
-            webcam.update();
-            const prediction = await model.predict(webcam.canvas);
-            for (let i = 0; i < model.getTotalClasses(); i++) {
-                if (prediction[i].probability > 0.40) { // Probabilidad para tus pulgones
-                    if (typeof ThunkableWebviewerActivity !== "undefined") {
-                        ThunkableWebviewerActivity.postMessage(prediction[i].className);
-                    }
+            if (webcam) {
+                webcam.update();
+                if (escanearActivo) {
+                    await predict();
                 }
             }
             window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < model.getTotalClasses(); i++) {
+                // Probabilidad de 0.40 para detectar tus clases
+                if (prediction[i].probability > 0.40) { 
+                    const mensaje = prediction[i].className;
+                    
+                    // ENVÍO DE MENSAJE A THUNKABLE
+                    if (typeof ThunkableWebviewerActivity !== "undefined") {
+                        ThunkableWebviewerActivity.postMessage(mensaje);
+                    }
+                }
+            }
         }
     </script>
 </body>
