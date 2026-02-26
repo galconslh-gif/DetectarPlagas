@@ -9,21 +9,22 @@
         #webcam-container { width: 100%; display: flex; justify-content: center; }
         canvas { width: 100% !important; height: auto !important; }
         #btn-iniciar { padding: 20px 40px; font-size: 18px; background-color: #28a745; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        #status { margin-top: 10px; font-size: 14px; color: #888; }
+        #status { margin-top: 10px; font-size: 14px; color: #888; text-align: center; }
     </style>
 </head>
 <body>
     <button id="btn-iniciar" onclick="comenzar()">ACTIVAR ESCÁNER</button>
-    <div id="status">Toca para dar permiso a la cámara</div>
+    <div id="status">Toca el botón para permitir el acceso</div>
     <div id="webcam-container"></div>
 
     <script type="text/javascript">
+        // Usamos tu link de Teachable Machine
         const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
         let model, webcam, maxPredictions;
 
         async function comenzar() {
             document.getElementById("btn-iniciar").style.display = "none";
-            document.getElementById("status").innerHTML = "Cargando IA...";
+            document.getElementById("status").innerHTML = "Iniciando cámara...";
             await init();
         }
 
@@ -34,11 +35,10 @@
                 model = await tmImage.load(modelURL, metadataURL);
                 maxPredictions = model.getTotalClasses();
 
-                // Configuración específica para iPhone
                 const flip = false;
                 webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, flip);
                 
-                // Intentar usar cámara trasera
+                // Configuración para cámara trasera en iPhone
                 await webcam.setup({ facingMode: "environment" }); 
                 
                 await webcam.play();
@@ -47,7 +47,7 @@
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
             } catch (e) {
                 document.getElementById("status").innerHTML = "Error: " + e;
-                alert("Por favor, asegúrate de permitir el acceso a la cámara.");
+                console.error(e);
             }
         }
 
@@ -60,7 +60,7 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
-                // Mantenemos tu probabilidad de 0.35 para detectar pulgones
+                // Probabilidad de 0.35 para detectar tus pulgones
                 if (prediction[i].probability > 0.35) {
                     if (typeof ThunkableWebviewerActivity !== "undefined") {
                         ThunkableWebviewerActivity.postMessage(prediction[i].className);
