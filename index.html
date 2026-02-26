@@ -5,67 +5,51 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
     <style>
-        body { margin: 0; background-color: black; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: white; font-family: -apple-system, sans-serif; }
+        body { margin: 0; background: #000; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: -apple-system, sans-serif; }
         #webcam-container { width: 100%; display: flex; justify-content: center; }
-        canvas { width: 100% !important; height: auto !important; border-radius: 10px; }
-        #btn-iniciar { padding: 20px 40px; font-size: 20px; background-color: #28a745; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        #status { margin-top: 15px; font-size: 14px; color: #888; text-align: center; }
+        canvas { width: 100% !important; height: auto !important; }
+        .boton-ios { padding: 25px 50px; font-size: 22px; background: #28a745; color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
-    <button id="btn-iniciar" onclick="iniciarEscaner()">ACTIVAR CÁMARA</button>
-    <div id="status">Toca el botón para permitir el acceso en iOS</div>
+    <button id="iniciar" class="boton-ios" onclick="activar()">TOCA AQUÍ PARA ESCANEAR</button>
     <div id="webcam-container"></div>
 
-    <script type="text/javascript">
+    <script>
         const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
-        let model, webcam, maxPredictions;
+        let model, webcam;
 
-        async function iniciarEscaner() {
-            document.getElementById("btn-iniciar").style.display = "none";
-            document.getElementById("status").innerHTML = "Iniciando IA y Cámara...";
-            await init();
-        }
-
-        async function init() {
+        async function activar() {
+            // 1. Ocultamos el botón para que no estorbe
+            document.getElementById('iniciar').style.display = 'none';
+            
             try {
-                const modelURL = URL + "model.json";
-                const metadataURL = URL + "metadata.json";
-                model = await tmImage.load(modelURL, metadataURL);
-                maxPredictions = model.getTotalClasses();
-
-                // Configuración vital para la cámara del iPhone
-                const flip = false; 
-                webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, flip);
+                // 2. Cargamos el modelo
+                model = await tmImage.load(URL + "model.json", URL + "metadata.json");
                 
-                // Forzamos la cámara trasera (environment)
+                // 3. Iniciamos la cámara (iOS requiere que esto pase justo después de un clic)
+                webcam = new tmImage.Webcam(window.innerWidth, window.innerWidth, false);
                 await webcam.setup({ facingMode: "environment" }); 
-                
                 await webcam.play();
-                document.getElementById("status").style.display = "none";
+                
                 window.requestAnimationFrame(loop);
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
             } catch (e) {
-                document.getElementById("status").innerHTML = "Error: " + e;
-                alert("Asegúrate de dar permiso a la cámara en el aviso que aparecerá.");
+                alert("Error crítico: " + e);
             }
         }
 
         async function loop() {
             webcam.update();
-            await predict();
-            window.requestAnimationFrame(loop);
-        }
-
-        async function predict() {
             const prediction = await model.predict(webcam.canvas);
-            for (let i = 0; i < maxPredictions; i++) {
-                if (prediction[i].probability > 0.35) {
+            for (let i = 0; i < model.getTotalClasses(); i++) {
+                if (prediction[i].probability > 0.40) { // Probabilidad para tus pulgones
                     if (typeof ThunkableWebviewerActivity !== "undefined") {
                         ThunkableWebviewerActivity.postMessage(prediction[i].className);
                     }
                 }
             }
+            window.requestAnimationFrame(loop);
         }
     </script>
 </body>
