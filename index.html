@@ -18,6 +18,7 @@
     <div id="webcam-container"></div>
 
     <script type="text/javascript">
+        // Este es el link a tu modelo que confirmamos que funciona
         const URL = "https://teachablemachine.withgoogle.com/models/8e7JeaSIh/";
         let model, webcam, maxPredictions;
 
@@ -39,7 +40,7 @@
                 window.requestAnimationFrame(loop);
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
             } catch (e) {
-                alert("Error al iniciar cámara: " + e);
+                alert("Error: " + e);
             }
         }
 
@@ -52,7 +53,7 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
-                // Probabilidad de 0.40 para detectar tus Pulgones (53%)
+                // Ajustado para detectar tus pulgones (0.40)
                 if (prediction[i].probability > 0.40) {
                     if (typeof ThunkableWebviewerActivity !== "undefined") {
                         ThunkableWebviewerActivity.postMessage(prediction[i].className);
